@@ -5,10 +5,10 @@ import (
 	"log"
 	"net/http"
 
-	"prj/config"
-	"prj/db"
-	"prj/handlers"
-	"prj/services"
+	"flashcards/config"
+	"flashcards/db"
+	"flashcards/handlers"
+	"flashcards/services"
 
 	"github.com/gorilla/mux"
 )
@@ -26,15 +26,33 @@ func main() {
 	}
 	defer todoRepo.Close()
 
+	noteRepo, err := db.NewPostgresNoteRepository(cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("Failed to initialize note database: %v", err)
+	}
+	defer noteRepo.Close()
+
 	todoService := services.NewTodoService(todoRepo)
 	todoHandler := handlers.NewTodoHandler(todoService)
+
+	noteService := services.NewNoteService(noteRepo)
+	noteHandler := handlers.NewNoteHandler(noteService)
+
+	quizService := services.NewQuizService(noteService, cfg.OpenAIAPIKey)
+	quizHandler := handlers.NewQuizHandler(quizService)
 
 	router := mux.NewRouter()
 
 	router.Use(corsMiddleware)
 	router.Use(jsonMiddleware)
 
+	router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}).Methods("OPTIONS")
+
 	todoHandler.RegisterRoutes(router)
+	noteHandler.RegisterRoutes(router)
+	quizHandler.RegisterRoutes(router)
 
 	router.HandleFunc("/health", healthCheckHandler).Methods("GET")
 
@@ -49,9 +67,12 @@ func main() {
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		w.Header().Set("Access-Control-Expose-Headers", "*")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
+		log.Println("CORS MIDDLEWARE")
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -72,5 +93,3 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status": "healthy"}`))
 }
-
-

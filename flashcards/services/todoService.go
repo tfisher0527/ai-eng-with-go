@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"prj/db"
-	"prj/models"
+	"flashcards/db"
+	"flashcards/models"
 )
 
 type TodoService struct {
@@ -137,4 +137,3 @@ func (s *TodoService) validateUpdateRequest(req *models.UpdateTodoRequest) error
 
 	return nil
 }
-

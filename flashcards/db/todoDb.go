@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"prj/models"
+	"flashcards/models"
 
 	_ "github.com/lib/pq"
 )

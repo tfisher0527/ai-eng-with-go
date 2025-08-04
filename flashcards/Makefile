@@ -1,5 +1,3 @@
-# Go Project Template Makefile
-
 .PHONY: help build run clean db-start db-stop db-up db-down db-reset
 
 # Default target
